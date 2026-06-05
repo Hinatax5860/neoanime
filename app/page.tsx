@@ -1,41 +1,98 @@
 "use client";
 
-import { useState } from "react";
-import { Play, Film, Search } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Play, Film, Search, Loader2 } from "lucide-react";
 
-// Reliable backup catalog with styled fallback gradients so cards are never blank
-const BACKUP_ANIME = [
-  { id: "cyberpunk", title: "Cyberpunk: Edgerunners", info: "Sci-Fi, Action", gradient: "from-blue-600 to-indigo-900" },
-  { id: "naruto", title: "Naruto Shippuden", info: "Ninja, Shounen", gradient: "from-orange-600 to-red-900" },
-  { id: "one-piece", title: "One Piece", info: "Pirates, Adventure", gradient: "from-cyan-600 to-blue-950" }
-];
-
-const EPISODES_LIST = [
-  { id: "1", num: 1, url: "https://googleapis.com" },
-  { id: "2", num: 2, url: "https://googleapis.com" },
-  { id: "3", num: 3, url: "https://googleapis.com" }
-];
-
-export default function UnbreakableAnimeSite() {
+export default function DynamicAnimeSite() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeAnime, setActiveAnime] = useState(BACKUP_ANIME[0]);
-  const [activeVideo, setActiveVideo] = useState(EPISODES_LIST[0].url);
-  const [epTitle, setEpTitle] = useState("Episode 1");
-  const [playing, setPlaying] = useState(false);
+  const [animeList, setAnimeList] = useState<any[]>([]);
+  const [selectedAnime, setSelectedAnime] = useState<any>(null);
+  const [episodes, setEpisodes] = useState<any[]>([]);
+  const [currentVideoUrl, setCurrentVideoUrl] = useState<string>("");
+  const [currentEpisodeTitle, setCurrentEpisodeTitle] = useState<string>("");
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Search function placeholder layout
-  const handleSearchSubmit = (e: React.FormEvent) => {
+  // Automatically fetch current hot anime releases when the page fires up
+  useEffect(() => {
+    fetchTrending();
+  }, []);
+
+  const fetchTrending = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("https://amvstr.me");
+      const data = await res.json();
+      if (data.results && data.results.length > 0) {
+        setAnimeList(data.results);
+        handleSelectAnime(data.results[0]);
+      }
+    } catch (err) {
+      console.error("API error, tracking fallback instance...");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
-    alert(`Searching for "${searchQuery}"... Sandbox server mode active.`);
+    setIsLoading(true);
+    try {
+      const res = await fetch(`https://amvstr.me{searchQuery}`);
+      const data = await res.json();
+      if (data.results) {
+        setAnimeList(data.results);
+        if (data.results.length > 0) {
+          handleSelectAnime(data.results[0]);
+        }
+      }
+    } catch (err) {
+      alert("Search server timeout. Try again shortly.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSelectAnime = async (anime: any) => {
+    setSelectedAnime(anime);
+    setIsPlaying(false);
+    setCurrentVideoUrl("");
+    setEpisodes([]);
+
+    try {
+      const res = await fetch(`https://amvstr.me{anime.id}`);
+      const data = await res.json();
+      if (data.episodes && data.episodes.length > 0) {
+        setEpisodes(data.episodes);
+        handleSelectEpisode(data.episodes[0]);
+      }
+    } catch (err) {
+      console.error("Failed loading episodes.");
+    }
+  };
+
+  const handleSelectEpisode = async (ep: any) => {
+    setCurrentEpisodeTitle(`Episode ${ep.number}`);
+    setIsPlaying(false);
+    try {
+      const res = await fetch(`https://amvstr.me{ep.id}`);
+      const data = await res.json();
+      if (data.nspl && data.nspl.main) {
+        setCurrentVideoUrl(data.nspl.main);
+      } else if (data.stream && data.stream.multi) {
+        setCurrentVideoUrl(data.stream.multi);
+      }
+    } catch (err) {
+      console.error("Video stream configuration error.");
+    }
   };
 
   return (
     <main className="min-h-screen bg-neutral-950 text-neutral-100 font-sans">
-      
-      {/* Navigation Header with Search Bar */}
+      {/* Search Header Bar */}
       <nav className="border-b border-neutral-800 bg-neutral-900/50 backdrop-blur px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2 font-black text-xl tracking-wider text-purple-500 cursor-pointer">
+        <div onClick={fetchTrending} className="flex items-center gap-2 font-black text-xl tracking-wider text-purple-500 cursor-pointer">
           <Film className="w-6 h-6" />
           <span>NEO<span className="text-white">ANIME</span></span>
         </div>
@@ -43,7 +100,7 @@ export default function UnbreakableAnimeSite() {
         <form onSubmit={handleSearchSubmit} className="relative w-full max-w-md">
           <input
             type="text"
-            placeholder="Search anime shows..."
+            placeholder="Search thousands of anime shows..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-neutral-900 border border-neutral-800 rounded-xl py-2 pl-4 pr-10 text-sm focus:outline-none focus:border-purple-500 transition text-white"
@@ -54,82 +111,93 @@ export default function UnbreakableAnimeSite() {
         </form>
       </nav>
 
-      {/* Main Content Area */}
-      <div className="max-w-7xl mx-auto p-4 lg:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
-        {/* Left Column: Player and Poster Banner */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="relative aspect-video bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-800 shadow-2xl">
-            {!playing ? (
-              <div className="absolute inset-0 p-6 lg:p-8 flex flex-col justify-end bg-gradient-to-t from-neutral-950 via-neutral-900/40 to-transparent">
-                <div className={`absolute inset-0 bg-gradient-to-br ${activeAnime.gradient} opacity-40 -z-10`} />
-                <h1 className="text-2xl lg:text-4xl font-extrabold tracking-tight">{activeAnime.title}</h1>
-                <p className="text-neutral-400 text-sm mt-1 mb-4">{epTitle}</p>
-                <button 
-                  onClick={() => setPlaying(true)} 
-                  className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition w-fit shadow-lg shadow-purple-600/30"
-                >
-                  <Play className="w-5 h-5 fill-current" /> Watch Now
-                </button>
-              </div>
-            ) : (
-              <video src={activeVideo} className="w-full h-full object-contain" controls autoPlay />
-            )}
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold">{activeAnime.title}</h2>
-            <p className="text-purple-400 text-sm mt-1 font-medium">{activeAnime.info}</p>
-          </div>
+      {isLoading && (
+        <div className="flex items-center justify-center py-20 gap-2 text-purple-400">
+          <Loader2 className="w-6 h-6 animate-spin" />
+          <span>Connecting Live Anime Feeds...</span>
         </div>
+      )}
 
-        {/* Right Column: Episode Selection Sidebar */}
-        <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 h-fit">
-          <h3 className="font-bold text-lg mb-4 border-b border-neutral-800 pb-2">Select Episode</h3>
-          <div className="space-y-2">
-            {EPISODES_LIST.map((ep) => (
-              <button
-                key={ep.id}
-                onClick={() => {
-                  setActiveVideo(ep.url);
-                  setEpTitle(`Episode ${ep.num}`);
-                  setPlaying(false);
-                }}
-                className="w-full text-left p-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 hover:text-purple-400 transition text-sm flex items-center justify-between"
+      {!isLoading && selectedAnime && (
+        <div className="max-w-7xl mx-auto p-4 lg:p-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Active Screen Display Node */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="relative aspect-video bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-800 shadow-2xl">
+              {!isPlaying ? (
+                <div className="absolute inset-0 p-6 lg:p-8 flex flex-col justify-end bg-gradient-to-t from-black via-black/20 to-transparent">
+                  <img src={selectedAnime.image || selectedAnime.cover} className="absolute inset-0 w-full h-full object-cover -z-10 brightness-[0.3]" />
+                  <h1 className="text-2xl lg:text-4xl font-extrabold tracking-tight line-clamp-2">{selectedAnime.title?.romaji || selectedAnime.title}</h1>
+                  <p className="text-neutral-400 text-sm mt-1 mb-4">{currentEpisodeTitle || "Selecting Stream..."}</p>
+                  <button 
+                    onClick={() => setIsPlaying(true)} 
+                    disabled={!currentVideoUrl}
+                    className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-neutral-800 disabled:text-neutral-500 text-white font-semibold py-3 px-6 rounded-xl transition w-fit shadow-lg shadow-purple-600/30"
+                  >
+                    <Play className="w-5 h-5 fill-current" /> {currentVideoUrl ? "Watch Now" : "Parsing Stream Links..."}
+                  </button>
+                </div>
+              ) : (
+                <video src={currentVideoUrl} className="w-full h-full object-contain" controls autoPlay />
+              )}
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold">{selectedAnime.title?.romaji || selectedAnime.title}</h2>
+              <p className="text-purple-400 text-sm mt-1 font-medium">Status: Live Fetch Active</p>
+            </div>
+          </div>
+
+          {/* Real-time Episode List Sidebar */}
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 h-fit max-h-[500px] flex flex-col">
+            <h3 className="font-bold text-lg mb-4 border-b border-neutral-800 pb-2">Available Episodes</h3>
+            <div className="space-y-2 overflow-y-auto pr-1 flex-1">
+              {episodes.length === 0 ? (
+                <p className="text-sm text-neutral-500 p-4 text-center animate-pulse">Loading directory entries...</p>
+              ) : (
+                episodes.map((ep) => {
+                  const isCurrent = currentEpisodeTitle === `Episode ${ep.number}`;
+                  return (
+                    <button
+                      key={ep.id}
+                      onClick={() => handleSelectEpisode(ep)}
+                      className={`w-full text-left p-3 rounded-xl transition text-sm flex items-center justify-between ${
+                        isCurrent ? "bg-purple-600/20 text-purple-400 border border-purple-500/40 font-medium" : "bg-neutral-800/50 hover:bg-neutral-800 text-neutral-400"
+                      }`}
+                    >
+                      <span>Episode {ep.number}</span>
+                      {isCurrent && <span className="text-xs bg-purple-500 text-white px-2 py-0.5 rounded">Active</span>}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+        </div>
+      )}
+
+      {/* Media Catalog Grid section */}
+      {!isLoading && animeList.length > 0 && (
+        <div className="max-w-7xl mx-auto p-4 lg:p-8 pt-0">
+          <h3 className="text-xl font-bold mb-4 text-neutral-300">Trending Right Now</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
+            {animeList.slice(0, 12).map((item) => (
+              <div
+                key={item.id}
+                onClick={() => handleSelectAnime(item)}
+                className={`bg-neutral-900 border rounded-xl overflow-hidden cursor-pointer hover:border-purple-500 transition group p-2 ${
+                  selectedAnime?.id === item.id ? "border-purple-500" : "border-neutral-800"
+                }`}
               >
-                <span>Play Episode {ep.num}</span>
-                <Play className="w-3 h-3 opacity-50" />
-              </button>
+                <div className="aspect-[2/3] w-full rounded-lg bg-neutral-800 relative overflow-hidden mb-2">
+                  <img src={item.image || item.cover} alt="poster" className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+                </div>
+                <h4 className="font-bold text-xs group-hover:text-purple-400 transition truncate">{item.title?.romaji || item.title}</h4>
+              </div>
             ))}
           </div>
         </div>
-
-      </div>
-
-      {/* Grid: Discover / Trending Component */}
-      <div className="max-w-7xl mx-auto p-4 lg:p-8 pt-0">
-        <h3 className="text-xl font-bold mb-4 text-neutral-300">Discover Trending Content</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {BACKUP_ANIME.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => {
-                setActiveAnime(item);
-                setPlaying(false);
-              }}
-              className={`bg-neutral-900 border p-3 rounded-xl cursor-pointer hover:border-purple-500 transition group ${
-                activeAnime.id === item.id ? "border-purple-500" : "border-neutral-800"
-              }`}
-            >
-              <div className={`aspect-video w-full rounded-lg bg-gradient-to-br ${item.gradient} mb-3 flex items-center justify-center relative overflow-hidden`}>
-                <Film className="w-8 h-8 text-white/20 group-hover:scale-110 transition duration-300" />
-              </div>
-              <h4 className="font-bold text-sm group-hover:text-purple-400 transition">{item.title}</h4>
-              <p className="text-neutral-500 text-xs mt-0.5">{item.info}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
+      )}
     </main>
   );
 }
