@@ -8,8 +8,6 @@ const CATALOG = [
   { id: "naruto", title: "Naruto Shippuden", info: "Ninja, Shounen", gradient: "from-orange-600 to-red-950" },
   { id: "one-piece", title: "One Piece", info: "Pirates, Adventure", gradient: "from-cyan-600 to-blue-950" }
 ];
-
-
 export default function AnimeSite() {
   const [searchQuery, setSearchQuery] = useState("");
   const [animeList, setAnimeList] = useState(CATALOG);
