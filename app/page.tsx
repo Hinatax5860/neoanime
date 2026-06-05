@@ -10,9 +10,9 @@ const CATALOG = [
 ];
 
 const EPISODES = [
-  { num: 1, url: "https://zencdn.net" },
-  { num: 2, url: "https://w3.org" },
-  { num: 3, url: "https://zencdn.net" }
+  { num: 1, url: "https://w3schools.com" },
+  { num: 2, url: "https://w3schools.com" },
+  { num: 3, url: "https://w3schools.com" }
 ];
 
 export default function AnimeSite() {
@@ -21,7 +21,7 @@ export default function AnimeSite() {
   const [animeList, setAnimeList] = useState(CATALOG);
   const [selected, setSelected] = useState(CATALOG);
   // FIXED: Explicitly pointing to a live working network source link string parameters on initial load
-  const [videoUrl, setVideoUrl] = useState("https://zencdn.net");
+const [videoUrl, setVideoUrl] = useState("https://w3schools.com");
   const [epTitle, setEpTitle] = useState("Episode 1");
   const [isPlaying, setIsPlaying] = useState(false);
 
