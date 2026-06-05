@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Play, Film, Search, Loader2 } from "lucide-react";
 
-// Change this to your unique private Render endpoint link
+// Make sure this matches your exact live Render web app service link
 const RENDER_API_BASE = "https://onrender.com";
 
 export default function FullyLiveAnimeSite() {
@@ -16,7 +16,6 @@ export default function FullyLiveAnimeSite() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Automatically fetch hot releases on page load
   useEffect(() => {
     fetchTrending();
   }, []);
@@ -26,12 +25,12 @@ export default function FullyLiveAnimeSite() {
     try {
       const res = await fetch(`${RENDER_API_BASE}/top-airing`);
       const data = await res.json();
-      if (data.results && data.results.length > 0) {
+      if (data && data.results && data.results.length > 0) {
         setAnimeList(data.results);
         handleSelectAnime(data.results[0]);
       }
     } catch (err) {
-      console.error("API is waking up, retrying shortly...");
+      console.error("API waking up, retrying shortly...", err);
     } finally {
       setIsLoading(false);
     }
@@ -44,20 +43,19 @@ export default function FullyLiveAnimeSite() {
     try {
       const res = await fetch(`${RENDER_API_BASE}/${searchQuery}`);
       const data = await res.json();
-      if (data.results) {
+      if (data && data.results && data.results.length > 0) {
         setAnimeList(data.results);
-        if (data.results.length > 0) {
-          handleSelectAnime(data.results[0]);
-        }
+        handleSelectAnime(data.results[0]);
       }
     } catch (err) {
-      alert("The server is still booting up. Try again in 30 seconds.");
+      alert("The server is still booting up. Try again in 10 seconds.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleSelectAnime = async (anime: any) => {
+    if (!anime) return;
     setSelectedAnime(anime);
     setIsPlaying(false);
     setCurrentVideoUrl("");
@@ -66,7 +64,7 @@ export default function FullyLiveAnimeSite() {
     try {
       const res = await fetch(`${RENDER_API_BASE}/info/${anime.id}`);
       const data = await res.json();
-      if (data.episodes && data.episodes.length > 0) {
+      if (data && data.episodes && data.episodes.length > 0) {
         setEpisodes(data.episodes);
         handleSelectEpisode(data.episodes[0]);
       }
@@ -76,13 +74,13 @@ export default function FullyLiveAnimeSite() {
   };
 
   const handleSelectEpisode = async (ep: any) => {
+    if (!ep) return;
     setCurrentEpisodeTitle(`Episode ${ep.number}`);
     setIsPlaying(false);
     try {
       const res = await fetch(`${RENDER_API_BASE}/watch/${ep.id}`);
       const data = await res.json();
-      if (data.sources && data.sources.length > 0) {
-        // Grab the best quality stream link format (.m3u8 or raw video)
+      if (data && data.sources && data.sources.length > 0) {
         const defaultSource = data.sources.find((s: any) => s.quality === "default") || data.sources[0];
         setCurrentVideoUrl(defaultSource.url);
       }
@@ -116,7 +114,14 @@ export default function FullyLiveAnimeSite() {
       {isLoading && (
         <div className="flex items-center justify-center py-20 gap-2 text-purple-400">
           <Loader2 className="w-6 h-6 animate-spin" />
-          <span>Fetching Active Anime Channels... (May take a moment if server is waking up)</span>
+          <span>Syncing Live Server Database... (Waking up, please hold)</span>
+        </div>
+      )}
+
+      {!isLoading && !selectedAnime && (
+        <div className="flex flex-col items-center justify-center py-32 text-neutral-500 text-sm">
+          <Loader2 className="w-8 h-8 animate-spin text-purple-500 mb-2" />
+          <p>Initial server configurations loading. Please wait 10 seconds...</p>
         </div>
       )}
 
@@ -126,13 +131,13 @@ export default function FullyLiveAnimeSite() {
             <div className="relative aspect-video bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-800 shadow-2xl">
               {!isPlaying ? (
                 <div className="absolute inset-0 p-6 lg:p-8 flex flex-col justify-end bg-gradient-to-t from-black via-black/20 to-transparent">
-                  <img src={selectedAnime.image} className="absolute inset-0 w-full h-full object-cover -z-10 brightness-[0.25]" />
+                  {selectedAnime.image && <img src={selectedAnime.image} className="absolute inset-0 w-full h-full object-cover -z-10 brightness-[0.25]" />}
                   <h1 className="text-2xl lg:text-4xl font-extrabold tracking-tight line-clamp-2">{selectedAnime.title}</h1>
                   <p className="text-neutral-400 text-sm mt-1 mb-4">{currentEpisodeTitle || "Selecting Stream..."}</p>
                   <button 
                     onClick={() => setIsPlaying(true)} 
                     disabled={!currentVideoUrl}
-                    className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-neutral-800 disabled:text-neutral-500 text-white font-semibold py-3 px-6 rounded-xl transition w-fit shadow-lg shadow-purple-600/30"
+                    className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-neutral-800 disabled:text-neutral-500 text-white font-semibold py-3 px-6 rounded-xl transition w-fit shadow-lg"
                   >
                     <Play className="w-5 h-5 fill-current" /> {currentVideoUrl ? "Watch Now" : "Parsing Video Streams..."}
                   </button>
@@ -143,7 +148,7 @@ export default function FullyLiveAnimeSite() {
             </div>
             <div>
               <h2 className="text-2xl font-bold">{selectedAnime.title}</h2>
-              <p className="text-purple-400 text-sm mt-1 font-medium">Status: Private Server Link Live</p>
+              <p className="text-purple-400 text-sm mt-1 font-medium">Status: Private Server Connected</p>
             </div>
           </div>
 
@@ -153,11 +158,11 @@ export default function FullyLiveAnimeSite() {
               {episodes.length === 0 ? (
                 <p className="text-sm text-neutral-500 p-4 text-center animate-pulse">Scanning server files...</p>
               ) : (
-                episodes.map((ep) => {
+                episodes.map((ep, i) => {
                   const isCurrent = currentEpisodeTitle === `Episode ${ep.number}`;
                   return (
                     <button
-                      key={ep.id}
+                      key={ep.id || i}
                       onClick={() => handleSelectEpisode(ep)}
                       className={`w-full text-left p-3 rounded-xl transition text-sm flex items-center justify-between ${
                         isCurrent ? "bg-purple-600/20 text-purple-400 border border-purple-500/40 font-medium" : "bg-neutral-800/50 hover:bg-neutral-800 text-neutral-400"
@@ -174,20 +179,20 @@ export default function FullyLiveAnimeSite() {
         </div>
       )}
 
-      {!isLoading && animeList.length > 0 && (
+      {!isLoading && animeList && animeList.length > 0 && (
         <div className="max-w-7xl mx-auto p-4 lg:p-8 pt-0">
           <h3 className="text-xl font-bold mb-4 text-neutral-300">Trending Right Now</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-4">
-            {animeList.slice(0, 12).map((item) => (
+            {animeList.slice(0, 12).map((item, idx) => (
               <div
-                key={item.id}
+                key={item.id || idx}
                 onClick={() => handleSelectAnime(item)}
                 className={`bg-neutral-900 border rounded-xl overflow-hidden cursor-pointer hover:border-purple-500 transition group p-2 ${
                   selectedAnime?.id === item.id ? "border-purple-500" : "border-neutral-800"
                 }`}
               >
                 <div className="aspect-[2/3] w-full rounded-lg bg-neutral-800 relative overflow-hidden mb-2">
-                  <img src={item.image} alt="poster" className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+                  {item.image && <img src={item.image} alt="poster" className="w-full h-full object-cover group-hover:scale-105 transition duration-300" />}
                 </div>
                 <h4 className="font-bold text-xs group-hover:text-purple-400 transition truncate">{item.title}</h4>
               </div>
