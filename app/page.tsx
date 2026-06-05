@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Play, Film, Search } from "lucide-react";
 
 const CATALOG = [
@@ -16,12 +16,22 @@ const EPISODES = [
 ];
 
 export default function AnimeSite() {
+  const [hasMounted, setHasMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [animeList, setAnimeList] = useState(CATALOG);
   const [selected, setSelected] = useState(CATALOG[0]);
   const [videoUrl, setVideoUrl] = useState(EPISODES[0].url);
   const [epTitle, setEpTitle] = useState("Episode 1");
   const [isPlaying, setIsPlaying] = useState(false);
+
+  // Safety hook: Prevents extensions from causing hydration errors on load
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  if (!hasMounted) {
+    return <div className="min-h-screen bg-neutral-950" />;
+  }
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +49,7 @@ export default function AnimeSite() {
   return (
     <main className="min-h-screen bg-neutral-950 text-neutral-100 font-sans p-4 lg:p-8">
       <nav className="max-w-7xl mx-auto mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-neutral-800 pb-4">
-        <div onClick={() => setAnimeList(CATALOG)} className="flex items-center gap-2 font-black text-xl tracking-wider text-purple-500 cursor-pointer">
+        <div onClick={() => { setAnimeList(CATALOG); setSelected(CATALOG[0]); }} className="flex items-center gap-2 font-black text-xl tracking-wider text-purple-500 cursor-pointer">
           <Film className="w-6 h-6" />
           <span>NEO<span className="text-white">ANIME</span></span>
         </div>
