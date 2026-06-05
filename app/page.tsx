@@ -20,11 +20,11 @@ export default function AnimeSite() {
   const [searchQuery, setSearchQuery] = useState("");
   const [animeList, setAnimeList] = useState(CATALOG);
   const [selected, setSelected] = useState(CATALOG[0]);
+  // FIXED: Accessing the url string inside the first array element directly
   const [videoUrl, setVideoUrl] = useState(EPISODES[0].url);
   const [epTitle, setEpTitle] = useState("Episode 1");
   const [isPlaying, setIsPlaying] = useState(false);
 
-  // Safety hook: Prevents extensions from causing hydration errors on load
   useEffect(() => {
     setHasMounted(true);
   }, []);
@@ -98,7 +98,7 @@ export default function AnimeSite() {
                 onClick={() => {
                   setVideoUrl(ep.url);
                   setEpTitle(`Episode ${ep.num}`);
-                  setIsPlaying(false);
+                  setIsPlaying(true); // Forces video to start playing immediately on click
                 }}
                 className={`w-full text-left p-3 rounded-xl transition text-sm flex items-center justify-between ${
                   epTitle === `Episode ${ep.num}` ? "bg-purple-600/20 text-purple-400 border border-purple-500/40 font-medium" : "bg-neutral-800 hover:bg-neutral-700 text-neutral-400"
