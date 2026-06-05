@@ -9,11 +9,6 @@ const CATALOG = [
   { id: "one-piece", title: "One Piece", info: "Pirates, Adventure", gradient: "from-cyan-600 to-blue-950" }
 ];
 
-const EPISODES = [
-  { num: 1, url: "https://googleapis.com" },
-  { num: 2, url: "https://googleapis.com" },
-  { num: 3, url: "https://googleapis.com" }
-];
 
 export default function AnimeSite() {
   const [searchQuery, setSearchQuery] = useState("");
